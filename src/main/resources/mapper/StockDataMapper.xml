@@ -1,0 +1,431 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.stock.mapper.StockDataMapper">
+
+    <select id="findByDateRange" resultType="com.example.stock.entity.StockData">
+        WITH stock_codes AS (
+            SELECT DISTINCT a.ts_code
+            FROM public.all_stocks_days a
+            WHERE a.trade_date = #{startDate}
+            <if test="tsCode != null">
+                AND a.ts_code = #{tsCode}
+            </if>
+            ORDER BY a.ts_code
+            LIMIT #{pageSize} OFFSET #{offset}
+        ),
+        date_range AS (
+            SELECT 
+                COALESCE(
+                    (SELECT trade_date FROM (
+                        SELECT DISTINCT trade_date
+                        FROM public.all_stocks_days
+                        WHERE trade_date &lt; #{startDate}
+                        ORDER BY trade_date DESC
+                        LIMIT 20
+                    ) AS prev_dates
+                    ORDER BY trade_date ASC
+                    LIMIT 1),
+                    (SELECT MIN(trade_date) FROM public.all_stocks_days)
+                ) AS start_date,
+                COALESCE(
+                    (SELECT trade_date FROM (
+                        SELECT DISTINCT trade_date
+                        FROM public.all_stocks_days
+                        WHERE trade_date > #{startDate}
+                        ORDER BY trade_date ASC
+                        LIMIT 20
+                    ) AS next_dates
+                    ORDER BY trade_date DESC
+                    LIMIT 1),
+                    (SELECT MAX(trade_date) FROM public.all_stocks_days)
+                ) AS end_date
+        )
+        SELECT a.*
+        FROM public.all_stocks_days a, date_range d
+        WHERE a.ts_code IN (SELECT ts_code FROM stock_codes)
+          AND a.trade_date BETWEEN d.start_date AND d.end_date
+        ORDER BY a.ts_code, a.trade_date ASC
+    </select>
+
+    <select id="findLimitUp" resultType="com.example.stock.entity.StockData">
+        WITH limit_up_stocks AS (
+            SELECT DISTINCT a.ts_code, a.pct_chg
+            FROM public.all_stocks_days a
+            <where>
+                <if test="tsCode != null">
+                    a.ts_code = #{tsCode} AND
+                </if>
+                a.trade_date = #{startDate} AND a.pct_chg &gt;= 6.0
+            </where>
+            ORDER BY a.pct_chg DESC
+            LIMIT #{pageSize} OFFSET #{offset}
+        )
+        SELECT a.*
+        FROM public.all_stocks_days a
+        JOIN limit_up_stocks l ON a.ts_code = l.ts_code
+        WHERE a.trade_date BETWEEN (
+            SELECT COALESCE(
+                (SELECT trade_date FROM (
+                    SELECT DISTINCT trade_date
+                    FROM public.all_stocks_days
+                    WHERE trade_date &lt; #{startDate}
+                    ORDER BY trade_date DESC
+                    LIMIT 20
+                ) AS prev_dates
+                ORDER BY trade_date ASC
+                LIMIT 1),
+                (SELECT MIN(trade_date) FROM public.all_stocks_days)
+            )
+        ) AND (
+            SELECT COALESCE(
+                (SELECT trade_date FROM (
+                    SELECT DISTINCT trade_date
+                    FROM public.all_stocks_days
+                    WHERE trade_date > #{startDate}
+                    ORDER BY trade_date ASC
+                    LIMIT 20
+                ) AS next_dates
+                ORDER BY trade_date DESC
+                LIMIT 1),
+                (SELECT MAX(trade_date) FROM public.all_stocks_days)
+            )
+        )
+        ORDER BY a.ts_code, a.trade_date ASC
+    </select>
+
+    <select id="findLimitDown" resultType="com.example.stock.entity.StockData">
+        WITH limit_down_stocks AS (
+            SELECT DISTINCT a.ts_code, a.pct_chg
+            FROM public.all_stocks_days a
+            <where>
+                <if test="tsCode != null">
+                    a.ts_code = #{tsCode} AND
+                </if>
+                a.trade_date = #{startDate} AND a.pct_chg &lt;= -6.0
+            </where>
+            ORDER BY a.pct_chg ASC
+            LIMIT #{pageSize} OFFSET #{offset}
+        )
+        SELECT a.*
+        FROM public.all_stocks_days a
+        JOIN limit_down_stocks l ON a.ts_code = l.ts_code
+        WHERE a.trade_date BETWEEN (
+            SELECT COALESCE(
+                (SELECT trade_date FROM (
+                    SELECT DISTINCT trade_date
+                    FROM public.all_stocks_days
+                    WHERE trade_date &lt; #{startDate}
+                    ORDER BY trade_date DESC
+                    LIMIT 20
+                ) AS prev_dates
+                ORDER BY trade_date ASC
+                LIMIT 1),
+                (SELECT MIN(trade_date) FROM public.all_stocks_days)
+            )
+        ) AND (
+            SELECT COALESCE(
+                (SELECT trade_date FROM (
+                    SELECT DISTINCT trade_date
+                    FROM public.all_stocks_days
+                    WHERE trade_date > #{startDate}
+                    ORDER BY trade_date ASC
+                    LIMIT 20
+                ) AS next_dates
+                ORDER BY trade_date DESC
+                LIMIT 1),
+                (SELECT MAX(trade_date) FROM public.all_stocks_days)
+            )
+        )
+        ORDER BY a.ts_code, a.trade_date ASC
+    </select>
+
+    <select id="findMinDate" resultType="java.time.LocalDate">
+        SELECT MIN(trade_date)
+        FROM public.all_stocks_days
+    </select>
+
+    <select id="findMaxDate" resultType="java.time.LocalDate">
+        SELECT MAX(trade_date)
+        FROM public.all_stocks_days
+    </select>
+
+    <select id="findNextNthTradeDate" resultType="java.time.LocalDate">
+        SELECT trade_date
+        FROM (
+            SELECT DISTINCT trade_date
+            FROM public.all_stocks_days
+            WHERE trade_date > #{date}
+            ORDER BY trade_date ASC
+            LIMIT #{n}
+        ) AS next_dates
+        ORDER BY trade_date DESC
+        LIMIT 1
+    </select>
+
+    <select id="findPreviousNthTradeDate" resultType="java.time.LocalDate">
+        SELECT trade_date
+        FROM (
+            SELECT DISTINCT trade_date
+            FROM public.all_stocks_days
+            WHERE trade_date &lt; #{date}
+            ORDER BY trade_date DESC
+            LIMIT #{n}
+        ) AS prev_dates
+        ORDER BY trade_date ASC
+        LIMIT 1
+    </select>
+
+    <select id="countStocks" resultType="java.lang.Long">
+        <if test="isLimitUp != null and isLimitUp">
+            SELECT COUNT(DISTINCT a.ts_code)
+            FROM public.all_stocks_days a
+            WHERE a.trade_date = #{startDate}
+            <if test="tsCode != null">
+                AND a.ts_code = #{tsCode}
+            </if>
+            AND a.pct_chg &gt;= 6.0
+        </if>
+        <if test="isLimitDown != null and isLimitDown">
+            SELECT COUNT(DISTINCT a.ts_code)
+            FROM public.all_stocks_days a
+            WHERE a.trade_date = #{startDate}
+            <if test="tsCode != null">
+                AND a.ts_code = #{tsCode}
+            </if>
+            AND a.pct_chg &lt;= -6.0
+        </if>
+        <if test="isLimitUp == null and isLimitDown == null">
+            SELECT COUNT(DISTINCT a.ts_code)
+            FROM public.all_stocks_days a
+            WHERE a.trade_date = #{startDate}
+            <if test="tsCode != null">
+                AND a.ts_code = #{tsCode}
+            </if>
+        </if>
+    </select>
+
+    <select id="findHalfYearLine" resultType="com.example.stock.entity.StockData">
+        WITH half_year_stocks AS (
+            SELECT a.ts_code, a.close, a.trade_date,
+                   (SELECT AVG(b.close)
+                    FROM public.all_stocks_days b
+                    WHERE b.ts_code = a.ts_code
+                    AND b.trade_date &lt;= #{startDate}
+                    AND b.trade_date > (
+                        SELECT COALESCE(
+                            (SELECT trade_date FROM (
+                                SELECT DISTINCT trade_date
+                                FROM public.all_stocks_days
+                                WHERE trade_date &lt; #{startDate}
+                                ORDER BY trade_date DESC
+                                LIMIT 120
+                            ) AS prev_dates
+                            ORDER BY trade_date ASC
+                            LIMIT 1),
+                            (SELECT MIN(trade_date) FROM public.all_stocks_days)
+                        )
+                    )) AS ma120
+            FROM public.all_stocks_days a
+            WHERE a.trade_date = #{startDate}
+            AND a.close > (
+                SELECT AVG(b.close)
+                FROM public.all_stocks_days b
+                WHERE b.ts_code = a.ts_code
+                AND b.trade_date &lt;= #{startDate}
+                AND b.trade_date > (
+                    SELECT COALESCE(
+                        (SELECT trade_date FROM (
+                            SELECT DISTINCT trade_date
+                            FROM public.all_stocks_days
+                            WHERE trade_date &lt; #{startDate}
+                            ORDER BY trade_date DESC
+                            LIMIT 120
+                        ) AS prev_dates
+                        ORDER BY trade_date ASC
+                        LIMIT 1),
+                        (SELECT MIN(trade_date) FROM public.all_stocks_days)
+                    )
+                )
+            )
+            <if test="tsCode != null">
+                AND a.ts_code = #{tsCode}
+            </if>
+            ORDER BY a.ts_code
+            LIMIT #{pageSize} OFFSET #{offset}
+        ),
+        date_range AS (
+            SELECT 
+                COALESCE(
+                    (SELECT trade_date FROM (
+                        SELECT DISTINCT trade_date
+                        FROM public.all_stocks_days
+                        WHERE trade_date &lt; #{startDate}
+                        ORDER BY trade_date DESC
+                        LIMIT 20
+                    ) AS prev_dates
+                    ORDER BY trade_date ASC
+                    LIMIT 1),
+                    (SELECT MIN(trade_date) FROM public.all_stocks_days)
+                ) AS start_date,
+                COALESCE(
+                    (SELECT trade_date FROM (
+                        SELECT DISTINCT trade_date
+                        FROM public.all_stocks_days
+                        WHERE trade_date > #{startDate}
+                        ORDER BY trade_date ASC
+                        LIMIT 20
+                    ) AS next_dates
+                    ORDER BY trade_date DESC
+                    LIMIT 1),
+                    (SELECT MAX(trade_date) FROM public.all_stocks_days)
+                ) AS end_date
+        )
+        SELECT a.*, h.ma120
+        FROM public.all_stocks_days a
+        JOIN half_year_stocks h ON a.ts_code = h.ts_code
+        JOIN date_range d ON a.trade_date BETWEEN d.start_date AND d.end_date
+        ORDER BY a.ts_code, a.trade_date ASC
+    </select>
+
+    <select id="findYearLine" resultType="com.example.stock.entity.StockData">
+        WITH year_stocks AS (
+            SELECT a.ts_code, a.close, a.trade_date,
+                   (SELECT AVG(b.close)
+                    FROM public.all_stocks_days b
+                    WHERE b.ts_code = a.ts_code
+                    AND b.trade_date &lt;= #{startDate}
+                    AND b.trade_date > (
+                        SELECT COALESCE(
+                            (SELECT trade_date FROM (
+                                SELECT DISTINCT trade_date
+                                FROM public.all_stocks_days
+                                WHERE trade_date &lt; #{startDate}
+                                ORDER BY trade_date DESC
+                                LIMIT 250
+                            ) AS prev_dates
+                            ORDER BY trade_date ASC
+                            LIMIT 1),
+                            (SELECT MIN(trade_date) FROM public.all_stocks_days)
+                        )
+                    )) AS ma250
+            FROM public.all_stocks_days a
+            WHERE a.trade_date = #{startDate}
+            AND a.close > (
+                SELECT AVG(b.close)
+                FROM public.all_stocks_days b
+                WHERE b.ts_code = a.ts_code
+                AND b.trade_date &lt;= #{startDate}
+                AND b.trade_date > (
+                    SELECT COALESCE(
+                        (SELECT trade_date FROM (
+                            SELECT DISTINCT trade_date
+                            FROM public.all_stocks_days
+                            WHERE trade_date &lt; #{startDate}
+                            ORDER BY trade_date DESC
+                            LIMIT 250
+                        ) AS prev_dates
+                        ORDER BY trade_date ASC
+                        LIMIT 1),
+                        (SELECT MIN(trade_date) FROM public.all_stocks_days)
+                    )
+                )
+            )
+            <if test="tsCode != null">
+                AND a.ts_code = #{tsCode}
+            </if>
+            ORDER BY a.ts_code
+            LIMIT #{pageSize} OFFSET #{offset}
+        ),
+        date_range AS (
+            SELECT 
+                COALESCE(
+                    (SELECT trade_date FROM (
+                        SELECT DISTINCT trade_date
+                        FROM public.all_stocks_days
+                        WHERE trade_date &lt; #{startDate}
+                        ORDER BY trade_date DESC
+                        LIMIT 20
+                    ) AS prev_dates
+                    ORDER BY trade_date ASC
+                    LIMIT 1),
+                    (SELECT MIN(trade_date) FROM public.all_stocks_days)
+                ) AS start_date,
+                COALESCE(
+                    (SELECT trade_date FROM (
+                        SELECT DISTINCT trade_date
+                        FROM public.all_stocks_days
+                        WHERE trade_date > #{startDate}
+                        ORDER BY trade_date ASC
+                        LIMIT 20
+                    ) AS next_dates
+                    ORDER BY trade_date DESC
+                    LIMIT 1),
+                    (SELECT MAX(trade_date) FROM public.all_stocks_days)
+                ) AS end_date
+        )
+        SELECT a.*, h.ma250
+        FROM public.all_stocks_days a
+        JOIN year_stocks h ON a.ts_code = h.ts_code
+        JOIN date_range d ON a.trade_date BETWEEN d.start_date AND d.end_date
+        ORDER BY a.trade_date ASC, a.ts_code ASC
+    </select>
+
+    <select id="countHalfYearLineStocks" resultType="java.lang.Long">
+        SELECT COUNT(DISTINCT a.ts_code)
+        FROM public.all_stocks_days a
+        WHERE a.trade_date = #{startDate}
+        AND a.close > (
+            SELECT AVG(b.close)
+            FROM public.all_stocks_days b
+            WHERE b.ts_code = a.ts_code
+            AND b.trade_date &lt;= #{startDate}
+            AND b.trade_date > (
+                SELECT COALESCE(
+                    (SELECT trade_date FROM (
+                        SELECT DISTINCT trade_date
+                        FROM public.all_stocks_days
+                        WHERE trade_date &lt; #{startDate}
+                        ORDER BY trade_date DESC
+                        LIMIT 120
+                    ) AS prev_dates
+                    ORDER BY trade_date ASC
+                    LIMIT 1),
+                    (SELECT MIN(trade_date) FROM public.all_stocks_days)
+                )
+            )
+        )
+        <if test="tsCode != null">
+            AND a.ts_code = #{tsCode}
+        </if>
+    </select>
+
+    <select id="countYearLineStocks" resultType="java.lang.Long">
+        SELECT COUNT(DISTINCT a.ts_code)
+        FROM public.all_stocks_days a
+        WHERE a.trade_date = #{startDate}
+        AND a.close > (
+            SELECT AVG(b.close)
+            FROM public.all_stocks_days b
+            WHERE b.ts_code = a.ts_code
+            AND b.trade_date &lt;= #{startDate}
+            AND b.trade_date > (
+                SELECT COALESCE(
+                    (SELECT trade_date FROM (
+                        SELECT DISTINCT trade_date
+                        FROM public.all_stocks_days
+                        WHERE trade_date &lt; #{startDate}
+                        ORDER BY trade_date DESC
+                        LIMIT 250
+                    ) AS prev_dates
+                    ORDER BY trade_date ASC
+                    LIMIT 1),
+                    (SELECT MIN(trade_date) FROM public.all_stocks_days)
+                )
+            )
+        )
+        <if test="tsCode != null">
+            AND a.ts_code = #{tsCode}
+        </if>
+    </select>
+
+</mapper> 
