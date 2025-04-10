@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.stock.mapper.StockDataMapper">
-
+    <!-- 根据日期范围查询股票数据 -->
     <select id="findByDateRange" resultType="com.example.stock.entity.StockData">
         WITH stock_codes AS (
             SELECT DISTINCT a.ts_code
@@ -47,6 +47,7 @@
         ORDER BY a.ts_code, a.trade_date ASC
     </select>
 
+    <!-- 查询涨停股票数据 -->
     <select id="findLimitUp" resultType="com.example.stock.entity.StockData">
         WITH limit_up_stocks AS (
             SELECT DISTINCT a.ts_code, a.pct_chg
@@ -93,6 +94,7 @@
         ORDER BY a.ts_code, a.trade_date ASC
     </select>
 
+    <!-- 查询跌停股票数据 -->
     <select id="findLimitDown" resultType="com.example.stock.entity.StockData">
         WITH limit_down_stocks AS (
             SELECT DISTINCT a.ts_code, a.pct_chg
@@ -139,16 +141,19 @@
         ORDER BY a.ts_code, a.trade_date ASC
     </select>
 
+    <!-- 查询最小日期 -->
     <select id="findMinDate" resultType="java.time.LocalDate">
         SELECT MIN(trade_date)
         FROM public.all_stocks_days
     </select>
 
+    <!-- 查询最大日期 -->
     <select id="findMaxDate" resultType="java.time.LocalDate">
         SELECT MAX(trade_date)
         FROM public.all_stocks_days
     </select>
 
+    <!-- 查询下一个第n个交易日 -->
     <select id="findNextNthTradeDate" resultType="java.time.LocalDate">
         SELECT trade_date
         FROM (
@@ -162,6 +167,7 @@
         LIMIT 1
     </select>
 
+    <!-- 查询上一个第n个交易日 -->
     <select id="findPreviousNthTradeDate" resultType="java.time.LocalDate">
         SELECT trade_date
         FROM (
@@ -175,6 +181,7 @@
         LIMIT 1
     </select>
 
+    <!-- 查询涨停股票数量 -->
     <select id="countStocks" resultType="java.lang.Long">
         <if test="isLimitUp != null and isLimitUp">
             SELECT COUNT(DISTINCT a.ts_code)
@@ -204,6 +211,7 @@
         </if>
     </select>
 
+    <!-- 查询半年线股票数据 -->
     <select id="findHalfYearLine" resultType="com.example.stock.entity.StockData">
         WITH half_year_stocks AS (
             SELECT a.ts_code, a.close, a.trade_date,
@@ -287,6 +295,7 @@
         ORDER BY a.ts_code, a.trade_date ASC
     </select>
 
+    <!-- 查询年线股票数据 -->
     <select id="findYearLine" resultType="com.example.stock.entity.StockData">
         WITH year_stocks AS (
             SELECT a.ts_code, a.close, a.trade_date,
@@ -370,6 +379,7 @@
         ORDER BY a.trade_date ASC, a.ts_code ASC
     </select>
 
+    <!-- 查询半年线股票数量 -->
     <select id="countHalfYearLineStocks" resultType="java.lang.Long">
         SELECT COUNT(DISTINCT a.ts_code)
         FROM public.all_stocks_days a
@@ -399,6 +409,7 @@
         </if>
     </select>
 
+    <!-- 查询年线股票数量 -->
     <select id="countYearLineStocks" resultType="java.lang.Long">
         SELECT COUNT(DISTINCT a.ts_code)
         FROM public.all_stocks_days a
