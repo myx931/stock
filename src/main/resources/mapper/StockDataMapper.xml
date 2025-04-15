@@ -40,7 +40,8 @@
                     (SELECT MAX(trade_date) FROM public.all_stocks_days)
                 ) AS end_date
         )
-        SELECT a.*
+        SELECT a.id, a.ts_code, a.trade_date, a.open, a.high, a.low, a.close, a.pre_close, a.pct_chg, a.vol, 
+               a.amount, a.turnover_rate, a.ma5, a.ma10, a.ma120, a.ma250
         FROM public.all_stocks_days a, date_range d
         WHERE a.ts_code IN (SELECT ts_code FROM stock_codes)
           AND a.trade_date BETWEEN d.start_date AND d.end_date
@@ -61,7 +62,8 @@
             ORDER BY a.pct_chg DESC
             LIMIT #{pageSize} OFFSET #{offset}
         )
-        SELECT a.*
+        SELECT a.id, a.ts_code, a.trade_date, a.open, a.high, a.low, a.close, a.pre_close, a.pct_chg, a.vol, 
+               a.amount, a.turnover_rate, a.ma5, a.ma10, a.ma120, a.ma250
         FROM public.all_stocks_days a
         JOIN limit_up_stocks l ON a.ts_code = l.ts_code
         WHERE a.trade_date BETWEEN (
@@ -108,7 +110,8 @@
             ORDER BY a.pct_chg ASC
             LIMIT #{pageSize} OFFSET #{offset}
         )
-        SELECT a.*
+        SELECT a.id, a.ts_code, a.trade_date, a.open, a.high, a.low, a.close, a.pre_close, a.pct_chg, a.vol, 
+               a.amount, a.turnover_rate, a.ma5, a.ma10, a.ma120, a.ma250
         FROM public.all_stocks_days a
         JOIN limit_down_stocks l ON a.ts_code = l.ts_code
         WHERE a.trade_date BETWEEN (
@@ -214,47 +217,10 @@
     <!-- 查询半年线股票数据 -->
     <select id="findHalfYearLine" resultType="com.example.stock.entity.StockData">
         WITH half_year_stocks AS (
-            SELECT a.ts_code, a.close, a.trade_date,
-                   (SELECT AVG(b.close)
-                    FROM public.all_stocks_days b
-                    WHERE b.ts_code = a.ts_code
-                    AND b.trade_date &lt;= #{startDate}
-                    AND b.trade_date > (
-                        SELECT COALESCE(
-                            (SELECT trade_date FROM (
-                                SELECT DISTINCT trade_date
-                                FROM public.all_stocks_days
-                                WHERE trade_date &lt; #{startDate}
-                                ORDER BY trade_date DESC
-                                LIMIT 120
-                            ) AS prev_dates
-                            ORDER BY trade_date ASC
-                            LIMIT 1),
-                            (SELECT MIN(trade_date) FROM public.all_stocks_days)
-                        )
-                    )) AS ma120
+            SELECT a.ts_code
             FROM public.all_stocks_days a
             WHERE a.trade_date = #{startDate}
-            AND a.close > (
-                SELECT AVG(b.close)
-                FROM public.all_stocks_days b
-                WHERE b.ts_code = a.ts_code
-                AND b.trade_date &lt;= #{startDate}
-                AND b.trade_date > (
-                    SELECT COALESCE(
-                        (SELECT trade_date FROM (
-                            SELECT DISTINCT trade_date
-                            FROM public.all_stocks_days
-                            WHERE trade_date &lt; #{startDate}
-                            ORDER BY trade_date DESC
-                            LIMIT 120
-                        ) AS prev_dates
-                        ORDER BY trade_date ASC
-                        LIMIT 1),
-                        (SELECT MIN(trade_date) FROM public.all_stocks_days)
-                    )
-                )
-            )
+            AND a.close > a.ma120
             <if test="tsCode != null">
                 AND a.ts_code = #{tsCode}
             </if>
@@ -288,7 +254,8 @@
                     (SELECT MAX(trade_date) FROM public.all_stocks_days)
                 ) AS end_date
         )
-        SELECT a.*, h.ma120
+        SELECT a.id, a.ts_code, a.trade_date, a.open, a.high, a.low, a.close, a.pre_close, a.pct_chg, a.vol, 
+               a.amount, a.turnover_rate, a.ma5, a.ma10, a.ma120, a.ma250
         FROM public.all_stocks_days a
         JOIN half_year_stocks h ON a.ts_code = h.ts_code
         JOIN date_range d ON a.trade_date BETWEEN d.start_date AND d.end_date
@@ -298,47 +265,10 @@
     <!-- 查询年线股票数据 -->
     <select id="findYearLine" resultType="com.example.stock.entity.StockData">
         WITH year_stocks AS (
-            SELECT a.ts_code, a.close, a.trade_date,
-                   (SELECT AVG(b.close)
-                    FROM public.all_stocks_days b
-                    WHERE b.ts_code = a.ts_code
-                    AND b.trade_date &lt;= #{startDate}
-                    AND b.trade_date > (
-                        SELECT COALESCE(
-                            (SELECT trade_date FROM (
-                                SELECT DISTINCT trade_date
-                                FROM public.all_stocks_days
-                                WHERE trade_date &lt; #{startDate}
-                                ORDER BY trade_date DESC
-                                LIMIT 250
-                            ) AS prev_dates
-                            ORDER BY trade_date ASC
-                            LIMIT 1),
-                            (SELECT MIN(trade_date) FROM public.all_stocks_days)
-                        )
-                    )) AS ma250
+            SELECT a.ts_code
             FROM public.all_stocks_days a
             WHERE a.trade_date = #{startDate}
-            AND a.close > (
-                SELECT AVG(b.close)
-                FROM public.all_stocks_days b
-                WHERE b.ts_code = a.ts_code
-                AND b.trade_date &lt;= #{startDate}
-                AND b.trade_date > (
-                    SELECT COALESCE(
-                        (SELECT trade_date FROM (
-                            SELECT DISTINCT trade_date
-                            FROM public.all_stocks_days
-                            WHERE trade_date &lt; #{startDate}
-                            ORDER BY trade_date DESC
-                            LIMIT 250
-                        ) AS prev_dates
-                        ORDER BY trade_date ASC
-                        LIMIT 1),
-                        (SELECT MIN(trade_date) FROM public.all_stocks_days)
-                    )
-                )
-            )
+            AND a.close > a.ma250
             <if test="tsCode != null">
                 AND a.ts_code = #{tsCode}
             </if>
@@ -372,11 +302,12 @@
                     (SELECT MAX(trade_date) FROM public.all_stocks_days)
                 ) AS end_date
         )
-        SELECT a.*, h.ma250
+        SELECT a.id, a.ts_code, a.trade_date, a.open, a.high, a.low, a.close, a.pre_close, a.pct_chg, a.vol, 
+               a.amount, a.turnover_rate, a.ma5, a.ma10, a.ma120, a.ma250
         FROM public.all_stocks_days a
         JOIN year_stocks h ON a.ts_code = h.ts_code
         JOIN date_range d ON a.trade_date BETWEEN d.start_date AND d.end_date
-        ORDER BY a.trade_date ASC, a.ts_code ASC
+        ORDER BY a.ts_code, a.trade_date ASC
     </select>
 
     <!-- 查询半年线股票数量 -->
@@ -384,26 +315,7 @@
         SELECT COUNT(DISTINCT a.ts_code)
         FROM public.all_stocks_days a
         WHERE a.trade_date = #{startDate}
-        AND a.close > (
-            SELECT AVG(b.close)
-            FROM public.all_stocks_days b
-            WHERE b.ts_code = a.ts_code
-            AND b.trade_date &lt;= #{startDate}
-            AND b.trade_date > (
-                SELECT COALESCE(
-                    (SELECT trade_date FROM (
-                        SELECT DISTINCT trade_date
-                        FROM public.all_stocks_days
-                        WHERE trade_date &lt; #{startDate}
-                        ORDER BY trade_date DESC
-                        LIMIT 120
-                    ) AS prev_dates
-                    ORDER BY trade_date ASC
-                    LIMIT 1),
-                    (SELECT MIN(trade_date) FROM public.all_stocks_days)
-                )
-            )
-        )
+        AND a.close > a.ma120
         <if test="tsCode != null">
             AND a.ts_code = #{tsCode}
         </if>
@@ -414,26 +326,7 @@
         SELECT COUNT(DISTINCT a.ts_code)
         FROM public.all_stocks_days a
         WHERE a.trade_date = #{startDate}
-        AND a.close > (
-            SELECT AVG(b.close)
-            FROM public.all_stocks_days b
-            WHERE b.ts_code = a.ts_code
-            AND b.trade_date &lt;= #{startDate}
-            AND b.trade_date > (
-                SELECT COALESCE(
-                    (SELECT trade_date FROM (
-                        SELECT DISTINCT trade_date
-                        FROM public.all_stocks_days
-                        WHERE trade_date &lt; #{startDate}
-                        ORDER BY trade_date DESC
-                        LIMIT 250
-                    ) AS prev_dates
-                    ORDER BY trade_date ASC
-                    LIMIT 1),
-                    (SELECT MIN(trade_date) FROM public.all_stocks_days)
-                )
-            )
-        )
+        AND a.close > a.ma250
         <if test="tsCode != null">
             AND a.ts_code = #{tsCode}
         </if>

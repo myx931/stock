@@ -42,6 +42,10 @@ public class StockResponse {
     private BigDecimal amount;
     // 换手率
     private BigDecimal turnoverRate;
+    // 5日均线
+    private BigDecimal ma5;
+    // 10日均线
+    private BigDecimal ma10;
     // 半年线
     private BigDecimal ma120;
     // 年线
@@ -59,7 +63,12 @@ public class StockResponse {
           preClose,
           pctChg,
           vol,
-          0.0 // bay字段，示例中固定为0.0
+          amount,
+          turnoverRate,
+          ma5,
+          ma10,
+          ma120,
+          ma250
       };
     }
   }

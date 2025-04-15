@@ -276,7 +276,8 @@ public class StockServiceImpl implements StockService {
     // 设置列名
     response.setColumn_names(Arrays.asList(
         "ts_code", "trade_date", "open", "high",
-        "low", "close", "pre_close", "pct_chg", "vol", "bay"));
+        "low", "close", "pre_close", "pct_chg", "vol", "amount",
+        "turnover_rate", "ma5", "ma10", "ma120", "ma250"));
 
     // 设置查询日期
     response.setDate(tradeDateStr != null ? tradeDateStr : LocalDate.now().toString());
@@ -361,7 +362,8 @@ public class StockServiceImpl implements StockService {
     // 设置列名
     response.setColumn_names(Arrays.asList(
         "ts_code", "trade_date", "open", "high",
-        "low", "close", "pre_close", "pct_chg", "vol", "bay"));
+        "low", "close", "pre_close", "pct_chg", "vol", "amount",
+        "turnover_rate", "ma5", "ma10", "ma120", "ma250"));
 
     // 设置查询日期
     response.setDate(tradeDateStr != null ? tradeDateStr : LocalDate.now().toString());
@@ -418,7 +420,8 @@ public class StockServiceImpl implements StockService {
     // 设置列名
     response.setColumn_names(Arrays.asList(
         "ts_code", "trade_date", "open", "high",
-        "low", "close", "pre_close", "pct_chg", "vol", "bay", maType));
+        "low", "close", "pre_close", "pct_chg", "vol", "amount",
+        "turnover_rate", "ma5", "ma10", "ma120", "ma250"));
 
     // 设置查询日期
     response.setDate(tradeDateStr != null ? tradeDateStr : LocalDate.now().toString());
@@ -445,14 +448,7 @@ public class StockServiceImpl implements StockService {
 
       // 将每个股票的数据转换为Object[]并添加到stockDataArray
       for (StockResponse.StockData data : sortedData) {
-        List<Object> dataArray = new ArrayList<>(Arrays.asList(data.toObjectArray()));
-        // 添加均线数据
-        if ("ma120".equals(maType)) {
-          dataArray.add(data.getMa120());
-        } else if ("ma250".equals(maType)) {
-          dataArray.add(data.getMa250());
-        }
-        stockDataArray.add(dataArray);
+        stockDataArray.add(Arrays.asList(data.toObjectArray()));
       }
 
       gridData.add(stockDataArray);
@@ -481,6 +477,8 @@ public class StockServiceImpl implements StockService {
     dto.setVol(entity.getVol());
     dto.setAmount(entity.getAmount());
     dto.setTurnoverRate(entity.getTurnoverRate());
+    dto.setMa5(entity.getMa5());
+    dto.setMa10(entity.getMa10());
     dto.setMa120(entity.getMa120());
     dto.setMa250(entity.getMa250());
     return dto;
@@ -495,7 +493,8 @@ public class StockServiceImpl implements StockService {
     // 设置列名
     response.setColumn_names(Arrays.asList(
         "ts_code", "trade_date", "open", "high",
-        "low", "close", "pre_close", "pct_chg", "vol", "bay"));
+        "low", "close", "pre_close", "pct_chg", "vol", "amount",
+        "turnover_rate", "ma5", "ma10", "ma120", "ma250"));
 
     // 设置查询日期
     response.setDate(tradeDateStr != null ? tradeDateStr : targetDate.toString());
