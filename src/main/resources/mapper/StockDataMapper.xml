@@ -235,7 +235,7 @@
                         FROM public.all_stocks_days
                         WHERE trade_date &lt; #{startDate}
                         ORDER BY trade_date DESC
-                        LIMIT 20
+                        LIMIT 250
                     ) AS prev_dates
                     ORDER BY trade_date ASC
                     LIMIT 1),
@@ -247,7 +247,7 @@
                         FROM public.all_stocks_days
                         WHERE trade_date > #{startDate}
                         ORDER BY trade_date ASC
-                        LIMIT 20
+                        LIMIT 250
                     ) AS next_dates
                     ORDER BY trade_date DESC
                     LIMIT 1),
@@ -283,7 +283,7 @@
                         FROM public.all_stocks_days
                         WHERE trade_date &lt; #{startDate}
                         ORDER BY trade_date DESC
-                        LIMIT 20
+                        LIMIT 750
                     ) AS prev_dates
                     ORDER BY trade_date ASC
                     LIMIT 1),
@@ -295,7 +295,7 @@
                         FROM public.all_stocks_days
                         WHERE trade_date > #{startDate}
                         ORDER BY trade_date ASC
-                        LIMIT 20
+                        LIMIT 750
                     ) AS next_dates
                     ORDER BY trade_date DESC
                     LIMIT 1),
